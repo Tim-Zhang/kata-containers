@@ -1,92 +1,6 @@
 on: [push]
 name: Build agent on multiple rust versions
 jobs:
-  build_nightly:
-    name: Nightly
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-            toolchain: nightly
-            target: x86_64-unknown-linux-musl
-            override: true
-      - name: Environmental preparation
-        run: |
-          sudo apt-get install musl-tools
-      - name: Make
-        working-directory: ./src/agent
-        run: make
-  build_stable:
-    name: Stable
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-            toolchain: stable
-            target: x86_64-unknown-linux-musl
-            override: true
-      - name: Environmental preparation
-        run: |
-          sudo apt-get install musl-tools
-      - name: Make
-        working-directory: ./src/agent
-        run: make
-
-  build_1420:
-    name: 1.42.0
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-            toolchain: 1.42.0
-            target: x86_64-unknown-linux-musl
-            override: true
-      - name: Environmental preparation
-        run: |
-          sudo apt-get install musl-tools
-      - name: Make
-        working-directory: ./src/agent
-        run: make
-  build_1410:
-    name: 1.41.0
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-            toolchain: 1.41.0
-            target: x86_64-unknown-linux-musl
-            override: true
-      - name: Environmental preparation
-        run: |
-          sudo apt-get install musl-tools
-      - name: Make
-        working-directory: ./src/agent
-        run: make
-  build_1400:
-    name: 1.40.0
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-            toolchain: 1.40.0
-            target: x86_64-unknown-linux-musl
-            override: true
-      - name: Environmental preparation
-        run: |
-          sudo apt-get install musl-tools
-      - name: Make
-        working-directory: ./src/agent
-        run: make
   build_1390:
     name: 1.39.0
     runs-on: ubuntu-latest
@@ -96,6 +10,57 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
             toolchain: 1.39.0
+            target: x86_64-unknown-linux-musl
+            override: true
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl-tools
+      - name: Make
+        working-directory: ./src/agent
+        run: make
+  build_1380:
+    name: 1.38.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.38.0
+            target: x86_64-unknown-linux-musl
+            override: true
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl-tools
+      - name: Make
+        working-directory: ./src/agent
+        run: make
+  build_1370:
+    name: 1.37.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.37.0
+            target: x86_64-unknown-linux-musl
+            override: true
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl-tools
+      - name: Make
+        working-directory: ./src/agent
+        run: make
+  build_1360:
+    name: 1.36.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.36.0
             target: x86_64-unknown-linux-musl
             override: true
       - name: Environmental preparation
