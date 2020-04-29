@@ -15,6 +15,7 @@ jobs:
       - name: Show rust versoins
         run: rustc -V && pwd
       - name: Make
+        working-directory: ./src/agent
         run: make
 
   build_1420:
@@ -31,6 +32,7 @@ jobs:
       - name: Show rust versoins
         run: rustc -V
       - name: Make
+        working-directory: ./src/agent
         run: make
   build_1390:
     name: Build-1.39.0
@@ -46,6 +48,7 @@ jobs:
       - name: Show rust versoins
         run: rustc -V
       - name: Maked
+        working-directory: ./src/agent
         run: make
   build_1320:
     name: Build-1.32.0
@@ -61,4 +64,5 @@ jobs:
       - name: Show rust versoins
         run: rustc -V
       - name: Make
+        working-directory: ./src/agent
         run: make
