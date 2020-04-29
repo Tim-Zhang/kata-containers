@@ -1,15 +1,30 @@
-on: [push]
+on:
+  repository_dispatch:
+    types: [build-agent-multi]
 name: Build agent on multiple rust versions
 jobs:
-  build_1390:
-    name: 1.39.0
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: khan/pull-request-comment-trigger@master
+        id: check
+        with:
+          trigger: '/bam'
+          prefix_only: true
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+      - run: 'echo Found it!'
+        if: steps.check.outputs.triggered == 'true'
+  build_nightly:
+    if: steps.check.outputs.triggered == 'true'
+    name: Nightly
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
-            toolchain: 1.39.0
+            toolchain: nightly
             target: x86_64-unknown-linux-musl
             override: true
       - name: Environmental preparation
@@ -18,83 +33,15 @@ jobs:
       - name: Make
         working-directory: ./src/agent
         run: make
-  build_1380:
-    name: 1.38.0
+  build_stable:
+    name: Stable
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
-            toolchain: 1.38.0
-            target: x86_64-unknown-linux-musl
-            override: true
-      - name: Environmental preparation
-        run: |
-          sudo apt-get install musl-tools
-      - name: Make
-        working-directory: ./src/agent
-        run: make
-  build_1370:
-    name: 1.37.0
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-            toolchain: 1.37.0
-            target: x86_64-unknown-linux-musl
-            override: true
-      - name: Environmental preparation
-        run: |
-          sudo apt-get install musl-tools
-      - name: Make
-        working-directory: ./src/agent
-        run: make
-  build_1360:
-    name: 1.36.0
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-            toolchain: 1.36.0
-            target: x86_64-unknown-linux-musl
-            override: true
-      - name: Environmental preparation
-        run: |
-          sudo apt-get install musl-tools
-      - name: Make
-        working-directory: ./src/agent
-        run: make
-  build_1350:
-    name: 1.35.0
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-            toolchain: 1.35.0
-            target: x86_64-unknown-linux-musl
-            override: true
-      - name: Environmental preparation
-        run: |
-          sudo apt-get install musl-tools
-      - name: Make
-        working-directory: ./src/agent
-        run: make
-  build_1300:
-    name: 1.20.0
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-            toolchain: 1.20.0
+            toolchain: stable
             target: x86_64-unknown-linux-musl
             override: true
       - name: Environmental preparation
