@@ -1,0 +1,204 @@
+on:
+  pull_request:
+    types:
+      - labeled
+name: Build agent on multiple rust versions
+jobs:
+  build_nightly:
+    if: github.event.label.name == 'build agent'
+    name: Nightly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+            target: x86_64-unknown-linux-musl
+            override: true
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl-tools
+      - name: Make
+        working-directory: ./src/agent
+        run: make
+  build_stable:
+    if: github.event.label.name == 'build agent'
+    name: Stable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            target: x86_64-unknown-linux-musl
+            override: true
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl-tools
+      - name: Make
+        working-directory: ./src/agent
+        run: make
+  build_1420:
+    if: github.event.label.name == 'build agent'
+    name: 1.42.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.42.0
+            target: x86_64-unknown-linux-musl
+            override: true
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl-tools
+      - name: Make
+        working-directory: ./src/agent
+        run: make
+  build_1410:
+    if: github.event.label.name == 'build agent'
+    name: 1.41.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.41.0
+            target: x86_64-unknown-linux-musl
+            override: true
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl-tools
+      - name: Make
+        working-directory: ./src/agent
+        run: make
+  build_1400:
+    if: github.event.label.name == 'build agent'
+    name: 1.40.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.40.0
+            target: x86_64-unknown-linux-musl
+            override: true
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl-tools
+      - name: Make
+        working-directory: ./src/agent
+        run: make
+  build_1390:
+    if: github.event.label.name == 'build agent'
+    name: 1.39.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.39.0
+            target: x86_64-unknown-linux-musl
+            override: true
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl-tools
+      - name: Make
+        working-directory: ./src/agent
+        run: make
+  build_1380:
+    if: github.event.label.name == 'build agent'
+    name: 1.38.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.38.0
+            target: x86_64-unknown-linux-musl
+            override: true
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl-tools
+      - name: Make
+        working-directory: ./src/agent
+        run: make
+  build_1370:
+    if: github.event.label.name == 'build agent'
+    name: 1.37.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.37.0
+            target: x86_64-unknown-linux-musl
+            override: true
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl-tools
+      - name: Make
+        working-directory: ./src/agent
+        run: make
+  build_1360:
+    if: github.event.label.name == 'build agent'
+    name: 1.36.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.36.0
+            target: x86_64-unknown-linux-musl
+            override: true
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl-tools
+      - name: Make
+        working-directory: ./src/agent
+        run: make
+  build_1350:
+    if: github.event.label.name == 'build agent'
+    name: 1.35.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.35.0
+            target: x86_64-unknown-linux-musl
+            override: true
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl-tools
+      - name: Make
+        working-directory: ./src/agent
+        run: make
+  build_1300:
+    if: github.event.label.name == 'build agent'
+    name: 1.20.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.20.0
+            target: x86_64-unknown-linux-musl
+            override: true
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl-tools
+      - name: Make
+        working-directory: ./src/agent
+        run: make
