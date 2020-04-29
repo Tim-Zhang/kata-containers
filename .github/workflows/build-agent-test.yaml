@@ -15,7 +15,7 @@ jobs:
       - name: Environmental preparation
         run: |
           sudo apt-get install musl musl-tools
-          sudo ln -s /bin/g++ /bin/musl-g++
+          sudo ln -s /usr/bin/g++ /usr/bin/musl-g++
       - name: Make
         working-directory: ./src/agent
         run: make
@@ -33,7 +33,7 @@ jobs:
       - name: Environmental preparation
         run: |
           sudo apt-get install musl musl-tools
-          sudo ln -s /bin/g++ /bin/musl-g++
+          sudo ln -s /usr/bin/g++ /usr/bin/musl-g++
       - name: Make
         working-directory: ./src/agent
         run: make
@@ -52,7 +52,7 @@ jobs:
       - name: Environmental preparation
         run: |
           sudo apt-get install musl musl-tools
-          sudo ln -s /bin/g++ /bin/musl-g++
+          sudo ln -s /usr/bin/g++ /usr/bin/musl-g++
       - name: Make
         working-directory: ./src/agent
         run: make
