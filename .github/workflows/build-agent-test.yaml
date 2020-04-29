@@ -12,8 +12,9 @@ jobs:
             toolchain: nightly
             target: x86_64-unknown-linux-musl
             override: true
-      - name: Show rust versoins
-        run: rustc -V && pwd
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl
       - name: Make
         working-directory: ./src/agent
         run: make
@@ -29,8 +30,9 @@ jobs:
             toolchain: 1.42.0
             target: x86_64-unknown-linux-musl
             override: true
-      - name: Show rust versoins
-        run: rustc -V
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl
       - name: Make
         working-directory: ./src/agent
         run: make
