@@ -14,7 +14,7 @@ jobs:
             override: true
       - name: Environmental preparation
         run: |
-          sudo apt-get install musl
+          sudo apt-get install musl musl-tools
       - name: Make
         working-directory: ./src/agent
         run: make
@@ -32,7 +32,7 @@ jobs:
             override: true
       - name: Environmental preparation
         run: |
-          sudo apt-get install musl
+          sudo apt-get install musl musl-tools
       - name: Make
         working-directory: ./src/agent
         run: make
@@ -47,9 +47,10 @@ jobs:
             toolchain: 1.39.0
             target: x86_64-unknown-linux-musl
             override: true
-      - name: Show rust versoins
-        run: rustc -V
-      - name: Maked
+      - name: Environmental preparation
+        run: |
+          sudo apt-get install musl
+      - name: Make
         working-directory: ./src/agent
         run: make
   build_1320:
