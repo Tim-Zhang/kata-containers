@@ -2,7 +2,7 @@ on: [push]
 name: Build agent on multiple rust versions
 jobs:
   build_1:
-    name: Build-nightly
+    name: Nightly
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -14,12 +14,13 @@ jobs:
             override: true
       - name: Environmental preparation
         run: |
-          sudo apt-get install musl musl-tools gcc g++
+          sudo apt-get install musl musl-tools
+          sudo ln -s /bin/g++ /bin/musl-g++
       - name: Make
         working-directory: ./src/agent
         run: make
   build_stable:
-    name: Build-1.42.0
+    name: Stable
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -31,13 +32,14 @@ jobs:
             override: true
       - name: Environmental preparation
         run: |
-          sudo apt-get install musl musl-tools gcc g++
+          sudo apt-get install musl musl-tools
+          sudo ln -s /bin/g++ /bin/musl-g++
       - name: Make
         working-directory: ./src/agent
         run: make
 
   build_1420:
-    name: Build-1.42.0
+    name: 1.42.0
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -50,6 +52,7 @@ jobs:
       - name: Environmental preparation
         run: |
           sudo apt-get install musl musl-tools
+          sudo ln -s /bin/g++ /bin/musl-g++
       - name: Make
         working-directory: ./src/agent
         run: make
