@@ -13,7 +13,7 @@ jobs:
             target: x86_64-unknown-linux-musl
             override: true
       - name: Show rust versoins
-        run: rustc -V
+        run: rustc -V && pwd
       - name: Make
         run: make
 
