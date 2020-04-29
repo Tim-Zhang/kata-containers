@@ -1,6 +1,6 @@
 on:
   repository_dispatch:
-    types: [build-agent-multi]
+    types: [build-agent]
 name: Build agent on multiple rust versions
 jobs:
   deploy:

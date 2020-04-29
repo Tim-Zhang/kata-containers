@@ -1,0 +1,20 @@
+on:
+  pull_request:
+    types:
+      - labeled
+name: watch labels
+jobs:
+  deploy:
+    if: github.event.label.name == 'build agent'
+    runs-on: ubuntu-latest
+    steps:
+    - run: 'echo Found it!'
+
+    - uses: tim-actions/dispatch@master
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        event: build-agent
+
+
+
+
