@@ -1,22 +1,7 @@
-on:
-  repository_dispatch:
-    types: [build-agent]
+on: [repository_dispatch]
 name: Build agent on multiple rust versions
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: khan/pull-request-comment-trigger@master
-        id: check
-        with:
-          trigger: '/bam'
-          prefix_only: true
-        env:
-          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
-      - run: 'echo Found it!'
-        if: steps.check.outputs.triggered == 'true'
   build_nightly:
-    if: steps.check.outputs.triggered == 'true'
     name: Nightly
     runs-on: ubuntu-latest
     steps:
