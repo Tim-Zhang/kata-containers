@@ -15,7 +15,6 @@ jobs:
       - name: Environmental preparation
         run: |
           sudo apt-get install musl musl-tools
-          sudo ln -s /usr/bin/g++ /usr/bin/musl-g++
       - name: Make
         working-directory: ./src/agent
         run: make
@@ -30,10 +29,6 @@ jobs:
             toolchain: stable
             target: x86_64-unknown-linux-musl
             override: true
-      - name: Environmental preparation
-        run: |
-          sudo apt-get install musl musl-tools
-          sudo ln -s /usr/bin/g++ /usr/bin/musl-g++
       - name: Make
         working-directory: ./src/agent
         run: make
@@ -51,7 +46,7 @@ jobs:
             override: true
       - name: Environmental preparation
         run: |
-          sudo apt-get install musl musl-tools
+          sudo apt-get install musl-tools
           sudo ln -s /usr/bin/g++ /usr/bin/musl-g++
       - name: Make
         working-directory: ./src/agent
