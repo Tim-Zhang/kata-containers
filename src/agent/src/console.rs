@@ -4,10 +4,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use crate::util;
 use anyhow::{anyhow, Result};
 use lazy_static;
-use nix::fcntl::{self, OFlag};
-use nix::fcntl::{FcntlArg, FdFlag};
+use nix::fcntl::{self, FcntlArg, FdFlag, OFlag};
 use nix::libc::{STDERR_FILENO, STDIN_FILENO, STDOUT_FILENO};
 use nix::pty::{openpty, OpenptyResult};
 use nix::sys::socket::{self, AddressFamily, SockAddr, SockFlag, SockType};
@@ -17,17 +17,18 @@ use nix::unistd::{self, close, dup2, fork, setsid, ForkResult, Pid};
 use rustjail::pipestream::PipeStream;
 use slog::Logger;
 use std::ffi::{CStr, CString};
-use std::fs::File;
-use std::io::{Read, Write};
 use std::os::unix::io::{FromRawFd, RawFd};
 use std::path::PathBuf;
+use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Mutex as SyncMutex;
+
+use futures::StreamExt;
+use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::select;
 use tokio::sync::watch::Receiver;
-use tokio::{pin, select};
 
 const CONSOLE_PATH: &str = "/dev/console";
-const DEFAULT_BUF_SIZE: usize = 8 * 1024;
 
 lazy_static! {
     static ref SHELLS: Arc<SyncMutex<Vec<String>>> = {
@@ -61,8 +62,6 @@ pub async fn debug_console_handler(
         .find(|sh| PathBuf::from(sh).exists())
         .ok_or_else(|| anyhow!("no shell found to launch debug console"))?;
 
-    let fd: RawFd;
-
     if port > 0 {
         let listenfd = socket::socket(
             AddressFamily::Vsock,
@@ -74,35 +73,66 @@ pub async fn debug_console_handler(
         socket::bind(listenfd, &addr)?;
         socket::listen(listenfd, 1)?;
 
-        fd = socket::accept4(listenfd, SockFlag::SOCK_CLOEXEC)?;
+        let mut incoming = util::get_vsock_incoming(listenfd)?;
+
+        loop {
+            select! {
+                _ = shutdown.changed() => {
+                    info!(logger, "debug console got shutdown request");
+                    break;
+                }
+
+                conn = incoming.next() => {
+                    if let Some(conn) = conn {
+                        // Accept a new connection
+                        match conn {
+                            Ok(stream) => {
+                                match run_debug_console_vsock(logger.clone(), shell, stream, shutdown.clone()).await {
+                                    Ok(_) => {
+                                        info!(logger, "run_debug_console_vsock session finished");
+                                    }
+                                    Err(err) => {
+                                        error!(logger, "run_debug_console_vsock failed: {:?}", err);
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                error!(logger, "{:?}", e);
+                            }
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
     } else {
         let mut flags = OFlag::empty();
         flags.insert(OFlag::O_RDWR);
         flags.insert(OFlag::O_CLOEXEC);
 
-        fd = fcntl::open(CONSOLE_PATH, flags, Mode::empty())?;
-    };
+        loop {
+            let fd = fcntl::open(CONSOLE_PATH, flags, Mode::empty())?;
+            let shutdown_for_inner = shutdown.clone();
+            select! {
+                _ = shutdown.changed() => {
+                    info!(logger, "debug console got shutdown request");
+                    break;
+                }
 
-    loop {
-        select! {
-            _ = shutdown.changed() => {
-                info!(logger, "got shutdown request");
-                break;
+                result = run_debug_console_serial(logger.clone(), shell, fd, shutdown_for_inner) => {
+                   match result {
+                       Ok(_) => {
+                           info!(logger, "run_debug_console_shell session finished");
+                       }
+                       Err(err) => {
+                           error!(logger, "run_debug_console_shell failed: {:?}", err);
+                       }
+                   }
+                }
             }
-
-            // BUG: FIXME: wait on parent.
-            //result = run_debug_console_shell(logger.clone(), shell, fd, shutdown.clone()) => {
-            //    match result {
-            //        Ok(_) => {
-            //            info!(logger, "run_debug_console_shell session finished");
-            //        }
-            //        Err(err) => {
-            //            error!(logger, "run_debug_console_shell failed: {:?}", err);
-            //        }
-            //    }
-            //}
         }
-    }
+    };
 
     Ok(())
 }
@@ -135,121 +165,56 @@ fn run_in_child(slave_fd: libc::c_int, shell: &str) -> Result<()> {
     Ok(())
 }
 
-async fn run_in_parent(
+async fn run_in_parent<T: AsyncRead + AsyncWrite>(
     logger: Logger,
     mut shutdown: Receiver<bool>,
-    socket_fd: RawFd,
+    stream: T,
     pseudo: OpenptyResult,
     child_pid: Pid,
 ) -> Result<()> {
     info!(logger, "get debug shell pid {:?}", child_pid);
 
-    let (rfd, wfd) = unistd::pipe2(OFlag::O_CLOEXEC)?;
     let master_fd = pseudo.master;
-    let slave_fd = pseudo.slave;
-    //let debug_shell_logger = logger.clone();
+    let _ = close(pseudo.slave);
 
-    let logger = logger.clone();
+    let (mut socket_reader, mut socket_writer) = tokio::io::split(stream);
+    let (mut master_reader, mut master_writer) = tokio::io::split(PipeStream::from_fd(master_fd));
 
-    // channel that used to sync between thread and main process
-    let (tx, rx) = std::sync::mpsc::channel::<i32>();
-
-    // start a thread to do IO copy between socket and pseudo.master
-    //tokio::spawn(async move {
-    //let logger = logger.clone();
-    //let mut shutdown = shutdown.clone();
-
-    //let mut master_reader = unsafe { File::from_raw_fd(master_fd) };
-    //let mut master_writer = unsafe { File::from_raw_fd(master_fd) };
-    //let mut socket_reader = unsafe { File::from_raw_fd(socket_fd) };
-    //let mut socket_writer = unsafe { File::from_raw_fd(socket_fd) };
-
-    let mut pipe_reader = PipeStream::from_fd(rfd);
-
-    //let mut pty_master_reader = PipeStream::from_fd(master_fd);
-    //let mut socket_reader = PipeStream::from_fd(socket_fd);
-
-    //pin!(pipe_reader);
-
-    // BUG: FIXME: add blocks for pipe_reader, master_fd and socket_fd
-    // (see commented out code below).
     loop {
         select! {
             _ = shutdown.changed() => {
                 info!(logger, "got shutdown request");
                 break;
             },
-            _ = pipe_reader => {
-                info!(
-                    debug_shell_logger,
-                    "debug shell process {} exited", child_pid
+            res = tokio::io::copy(&mut master_reader, &mut socket_writer) => {
+                debug!(
+                    logger,
+                    "master closed: {:?}", res
                 );
-                tx.send(1).unwrap();
-            },
 
+                break;
+            },
+            res = tokio::io::copy(&mut socket_reader, &mut master_writer) => {
+                info!(
+                    logger,
+                    "socket closed: {:?}", res
+                );
+
+                break;
+            }
         }
     }
-
-    //    if fd_set.contains(master_fd) {
-    //        match io_copy(&mut master_reader, &mut socket_writer) {
-    //            Ok(0) => {
-    //                debug!(debug_shell_logger, "master fd closed");
-    //                tx.send(1).unwrap();
-    //                break;
-    //            }
-    //            Ok(_) => {}
-    //            Err(ref e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
-    //            Err(e) => {
-    //                error!(debug_shell_logger, "read master fd error {:?}", e);
-    //                tx.send(1).unwrap();
-    //                break;
-    //            }
-    //        }
-    //    }
-
-    //    if fd_set.contains(socket_fd) {
-    //        match io_copy(&mut socket_reader, &mut master_writer) {
-    //            Ok(0) => {
-    //                debug!(debug_shell_logger, "socket fd closed");
-    //                tx.send(1).unwrap();
-    //                break;
-    //            }
-    //            Ok(_) => {}
-    //            Err(ref e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
-    //            Err(e) => {
-    //                error!(debug_shell_logger, "read socket fd error {:?}", e);
-    //                tx.send(1).unwrap();
-    //                break;
-    //            }
-    //        }
-    //    }
-    //}
-    //})
-    //.await;
 
     let wait_status = wait::waitpid(child_pid, None);
     info!(logger, "debug console process exit code: {:?}", wait_status);
 
-    info!(logger, "notify debug monitor thread to exit");
-    // close pipe to exit select loop
-    let _ = close(wfd);
-
-    // wait for thread exit.
-    let _ = rx.recv().unwrap();
-    info!(logger, "debug monitor thread has exited");
-
-    // close files
-    let _ = close(rfd);
-    let _ = close(master_fd);
-    let _ = close(slave_fd);
-
     Ok(())
 }
 
-async fn run_debug_console_shell(
+async fn run_debug_console_vsock<T: AsyncRead + AsyncWrite>(
     logger: Logger,
     shell: &str,
-    socket_fd: RawFd,
+    stream: T,
     shutdown: Receiver<bool>,
 ) -> Result<()> {
     let logger = logger.new(o!("subsystem" => "debug-console-shell"));
@@ -263,17 +228,39 @@ async fn run_debug_console_shell(
     match fork() {
         Ok(ForkResult::Child) => run_in_child(slave_fd, shell),
         Ok(ForkResult::Parent { child: child_pid }) => {
-            run_in_parent(
-                logger.clone(),
-                shutdown.clone(),
-                socket_fd,
-                pseudo,
-                child_pid,
-            )
-            .await
+            run_in_parent(logger.clone(), shutdown.clone(), stream, pseudo, child_pid).await
         }
         Err(err) => Err(anyhow!("fork error: {:?}", err)),
     }
+}
+
+async fn run_debug_console_serial(
+    logger: Logger,
+    shell: &str,
+    fd: RawFd,
+    mut shutdown: Receiver<bool>,
+) -> Result<()> {
+    let cmd = tokio::process::Command::new(shell)
+        .arg("-i")
+        .kill_on_drop(true)
+        .stdin(unsafe { Stdio::from_raw_fd(fd) })
+        .stdout(unsafe { Stdio::from_raw_fd(fd) })
+        .stderr(unsafe { Stdio::from_raw_fd(fd) })
+        .spawn();
+
+    let mut cmd = match cmd {
+        Ok(c) => c,
+        Err(_) => return Err(anyhow!("failed to spawn shell")),
+    };
+
+    select! {
+        _ = shutdown.changed() => {
+            info!(logger, "got shutdown request");
+        }
+        _ = cmd.wait() => {}
+    }
+
+    Ok(())
 }
 
 // BUG: FIXME:
@@ -326,28 +313,5 @@ mod tests {
             result.unwrap_err().to_string(),
             "no shell found to launch debug console"
         );
-    }
-}
-
-// BUG: FIXME: should not be required as we can use the
-// interruptable_io_copier(). But if it is still needed, move to utils.rs.
-fn io_copy<R: ?Sized, W: ?Sized>(reader: &mut R, writer: &mut W) -> std::io::Result<u64>
-where
-    R: Read,
-    W: Write,
-{
-    let mut buf = [0; DEFAULT_BUF_SIZE];
-    let buf_len;
-
-    match reader.read(&mut buf) {
-        Ok(0) => return Ok(0),
-        Ok(len) => buf_len = len,
-        Err(err) => return Err(err),
-    };
-
-    // write and return
-    match writer.write_all(&buf[..buf_len]) {
-        Ok(_) => Ok(buf_len as u64),
-        Err(err) => Err(err),
     }
 }

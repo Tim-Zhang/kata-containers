@@ -3,10 +3,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use anyhow::{anyhow, Result};
+use futures::StreamExt;
+use nix::fcntl::{self, FcntlArg, FdFlag};
 use std::io;
 use std::io::ErrorKind;
+use std::os::unix::io::{FromRawFd, RawFd};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::watch::Receiver;
+use tokio_vsock::{Incoming, VsockListener, VsockStream};
 
 // Size of I/O read buffer
 const BUF_SIZE: usize = 8192;
@@ -50,6 +55,27 @@ where
     }
 
     Ok(total_bytes)
+}
+
+pub fn set_fd_close_exec(fd: RawFd) -> Result<RawFd> {
+    if let Err(e) = fcntl::fcntl(fd, FcntlArg::F_SETFD(FdFlag::FD_CLOEXEC)) {
+        return Err(anyhow!("failed to set fd: {} as close-on-exec: {}", fd, e));
+    }
+    Ok(fd)
+}
+
+pub fn get_vsock_incoming(fd: RawFd) -> Result<Incoming> {
+    set_fd_close_exec(fd)?;
+    let incoming;
+    unsafe {
+        incoming = VsockListener::from_raw_fd(fd).incoming();
+    }
+    Ok(incoming)
+}
+
+pub async fn get_vsock_stream(fd: RawFd) -> Result<VsockStream> {
+    let stream = get_vsock_incoming(fd)?.next().await.unwrap()?;
+    Ok(stream)
 }
 
 #[cfg(test)]
